@@ -13,12 +13,12 @@ mod ffi {
         type Client;
 
         // fn set_entities_to_sync(self: &mut ClientBuilder, entities: Vec<EntityModel>);
-        async fn build(
+        fn build(
             torii_url: String,
             rpc_url: String,
             world: FieldElement,
             entities: Vec<EntityModel>,
-        ) -> Result<Box<Client>>;
+        ) -> RustFutureClient;
 
         // fn metadata(self: &Client) -> WorldMetadata;
         // // fn subscribed_entities(&self) -> HashSet<EntityModel>;
@@ -27,6 +27,10 @@ mod ffi {
         // fn add_entities_to_sync(self: &mut Client, entities: Vec<EntityModel>) -> Result<()>;
         // fn remove_entities_to_sync(self: &mut Client, entities: Vec<EntityModel>) -> Result<()>;
         // fn storage(&self) -> Arc<ModelStorage>;
+    }
+
+    unsafe extern "C++" {
+        type RustFutureClient = crate::RustFutureClient;
     }
 }
 
@@ -42,30 +46,37 @@ struct Client {
     client: client::Client,
 }
 
-async fn build(
+fn build(
     torii_url: String,
     rpc_url: String,
     world: FieldElement,
     entities: Vec<ffi::EntityModel>,
 ) -> Result<Box<Client>, Error> {
-    let client = client::Client::builder()
-        .set_entities_to_sync(
-            entities
-                .iter()
-                .map(|e| EntityModel {
-                    model: e.model.clone(),
-                    keys: e
-                        .keys
-                        .iter()
-                        .map(|k| FieldElement::from_bytes_be(&k.inner).unwrap())
-                        .collect::<_>(),
-                })
-                .collect(),
-        )
-        .build(torii_url, rpc_url, world)
-        .await?;
+    RustFutureClient::fallible(async move {
+        let client = client::Client::builder()
+            .set_entities_to_sync(
+                entities
+                    .iter()
+                    .map(|e| EntityModel {
+                        model: e.model.clone(),
+                        keys: e
+                            .keys
+                            .iter()
+                            .map(|k| FieldElement::from_bytes_be(&k.inner).unwrap())
+                            .collect::<_>(),
+                    })
+                    .collect(),
+            )
+            .build(torii_url, rpc_url, world)
+            .await?;
 
-    Ok(Box::new(client))
+        Ok(Box::new(client))
+    })
+}
+
+#[cxx_async::bridge]
+unsafe impl Future for RustFutureClient {
+    type Output = Result<Box<Client>, Error>;
 }
 
 fn main() {}
