@@ -1,0 +1,20 @@
+[package]
+edition = "2021"
+name = "torii-client-cpp"
+version = "0.3.1"
+
+[dependencies]
+dojo-types = { git = "https://github.com/dojoengine/dojo", version = "0.3.2" }
+torii-client = { git = "https://github.com/dojoengine/dojo", version = "0.3.2" }
+torii-grpc = { git = "https://github.com/dojoengine/dojo", version = "0.3.2", features = [
+    "client",
+] }
+
+cxx = "1.0"
+cxx-async = "0.1"
+parking_lot = "0.12.1"
+starknet = "0.6.0"
+starknet-crypto = "0.6.0"
+
+[build-dependencies]
+cxx-build = "1.0"
